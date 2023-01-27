@@ -7,7 +7,7 @@ int sensorValue = 0;
 float percentValue = 0;
 const int Dout = 7;
 const int sck = 6;
-const float berat = 600;
+const float berat = 700;
 long skala=0;
 
 HX711 Ukur;
