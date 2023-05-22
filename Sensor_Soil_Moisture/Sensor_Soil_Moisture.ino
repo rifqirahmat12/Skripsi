@@ -4,10 +4,11 @@
 int alarm = 8;
 int led = 9; 
 int sensorValue = 0;
-float percentValue = 0;
+float percentValue = 0.0;
 const int Dout = 7;
 const int sck = 6;
 const float berat = 700;
+const int YL69 A0
 long skala=0;
 
 HX711 Ukur;
@@ -17,7 +18,7 @@ void setup() {
   Serial.begin(9600);
   pinMode(alarm, OUTPUT);
   pinMode(led, OUTPUT);
-  pinMode(A0, INPUT);
+  pinMode(YL69, INPUT);
   Ukur.begin(Dout, sck);
   Ukur.set_scale(skala);
   lcd.init();
@@ -43,7 +44,7 @@ void loop() {
   Serial.print("\n\nAnalog Value: ");
   Serial.println(sensorValue);
   
-  percentValue = map(sensorValue, 899, 410, 0, 100);
+  percentValue = map(sensorValue, 1023, 0, 0, 100);
   Serial.print("\nPercentValue: ");
   Serial.print(percentValue);
   Serial.println("%");
