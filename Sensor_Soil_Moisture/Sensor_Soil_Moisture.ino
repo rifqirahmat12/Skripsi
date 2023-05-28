@@ -48,19 +48,20 @@ class Menu{
     float* bawah;
     float* atas;
     int ada = 0;
+    long addr;
     
     String menu[5] = {
       "kalibrasi ukuran",
       "pengukuran",
       "kalibrasi YL69",
       "lainya",
-      "ya       tidak"
+      "ya         tidak"
     };
 
   public:
     Menu(const int pin1, const int pin2, 
       const int pin3, const int pin4, const int yl69, const int alarm, 
-      long* skl, LiquidCrystal_I2C* lcd, float* bawah, float* atas){
+      long* skl, LiquidCrystal_I2C* lcd, float* bawah, float* atas, long addr){
         this->okPin= pin1;
         this->cancelPin = pin2;
         this->upPin = pin3;
@@ -70,6 +71,7 @@ class Menu{
         this->atas = atas;
         this->yl69 = yl69;
         this->alarm = alarm;
+        this->addr = addr;
     }
 
     void selamatFunc(){
@@ -94,10 +96,9 @@ class Menu{
       int lanjut = 1;
       long hasil = 0;
       
-      //Ukur.tare();
       delay(1000);
-      Ukur.set_scale(*skl);
-      //Ukur.tare();
+      Ukur.set_scale();
+      Ukur.tare();
       lcd->clear();
       lcd->print("masukan beban!");
       lcd->setCursor(0,1);
@@ -128,6 +129,7 @@ class Menu{
         sprintf(buff, "tare:%d", Ukur.get_tare());
         lcd->print(buff);
         delay(3000);
+        EEPROM.put(addr, Ukur.get_Scale(););
       }
       return kode;
     }
@@ -238,7 +240,6 @@ class Menu{
       return kode;
     }
     void pengukuranDisplay(float percentValue, float ukuran){
-      
       lcd->clear();
       lcd->setCursor(0, 0);
       lcd->print("Kadar Air Gabah");
@@ -369,7 +370,7 @@ class Menu{
         
         lcd->clear();
         lcd->print("ambil dari ROM");
-        EEPROM.get(1, temp);
+        EEPROM.get(addr, temp);
         delay(2000);
         lcd->clear();
         lcd->print("terbaca:");
@@ -486,7 +487,7 @@ class Menu{
       mode = value;
       return;
     }
-}utama(tombol_ok, tombol_cancel, tombol_atas, tombol_bawah, YL69, alarm, &skl, &lcd, &atas, &bawah);
+}utama(tombol_ok, tombol_cancel, tombol_atas, tombol_bawah, YL69, alarm, &skl, &lcd, &atas, &bawah, 0);
 void setup() {
   Serial.begin(9600);
   pinMode(alarm, OUTPUT);
@@ -501,8 +502,8 @@ void setup() {
   utama.selamatFunc();
 }
 void loop() {
-//  attachInterrupt(digitalPinToInterrupt(2), setMode, CHANGE);
-//  attachInterrupt(digitalPinToInterrupt(3), setMode, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(2), setMode, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(3), setMode, CHANGE);
   utama.initCommand();
 }
 void setMode(){
