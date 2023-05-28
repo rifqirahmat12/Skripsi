@@ -123,13 +123,13 @@ class Menu{
         lcd->print("terkalibrasi!");
         delay(2000);
         lcd->clear();
-        sprintf(buff, "skala:%d", Ukur.get_scale());
+        sprintf(buff, "skala:%d", hasil);
         lcd->print(buff);
         lcd->setCursor(0, 1);
         sprintf(buff, "tare:%d", Ukur.get_tare());
         lcd->print(buff);
         delay(3000);
-        EEPROM.put(addr, Ukur.get_Scale(););
+        EEPROM.put(addr, hasil);
       }
       return kode;
     }
@@ -177,7 +177,7 @@ class Menu{
             setKalibrasiArg();
             break;
           case 1:
-            pengukuranDisplay(Ukur.get_units(5), ukurYL69());
+            pengukuranDisplay(ukurYL69(),Ukur.get_units(10));
             break;
           case 2:
             kalibrasiYL69(YL69, bawah, atas);
@@ -271,7 +271,8 @@ class Menu{
       lcd->clear();
       lcd->print("masukan batas:");
       lcd->setCursor(0,1);
-      lcd->print(sprintf(buff, text, *bawah, *atas));
+      sprintf(buff, text, *bawah, *atas);
+      lcd->print(buff);
       while(true){
         int arrow = getArrowStroke(1);
         int command = getCommandStroke(1);
@@ -307,10 +308,10 @@ class Menu{
             b = *bawah;
             a = *atas;
           }
-          lcd->clear();
           lcd->print("masukan batas:");
           lcd->setCursor(1,0);
-          lcd->print(sprintf(buff,text,b,a));
+          sprintf(buff,text,b,a);
+          lcd->print(buff);
         }
       }
       interrupts();
@@ -366,7 +367,7 @@ class Menu{
         }
       }
       if(mod == 1){
-        unsigned long temp;
+        long temp;
         
         lcd->clear();
         lcd->print("ambil dari ROM");
@@ -465,7 +466,7 @@ class Menu{
     }
     float ukurYL69(){
       int sensorValue = analogRead(this->yl69);
-      float percentValue = map(sensorValue, 1023, 500 , 0, 100);
+      float percentValue = map(sensorValue, *atas, *bawah , 0, 100);
       if(percentValue < 14){ 
         ringAlarm(false);
       }else{ 
