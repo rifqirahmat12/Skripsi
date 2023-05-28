@@ -23,8 +23,8 @@ const float berat = 700;
 
 long skl=0;
 float percentValue = 0.0;
-float bawah;
-float atas;
+int bawah=0;
+int atas=1025;
 
 HX711 Ukur;
 LiquidCrystal_I2C lcd(0x27,16,2);
@@ -45,8 +45,8 @@ class Menu{
     int yl69;
     int alarm;
     bool kalibrasi = false;
-    float* bawah;
-    float* atas;
+    int* bawah;
+    int* atas;
     int ada = 0;
     long addr;
     
@@ -61,7 +61,7 @@ class Menu{
   public:
     Menu(const int pin1, const int pin2, 
       const int pin3, const int pin4, const int yl69, const int alarm, 
-      long* skl, LiquidCrystal_I2C* lcd, float* bawah, float* atas, long addr){
+      long* skl, LiquidCrystal_I2C* lcd, int* bawah, int* atas, long addr){
         this->okPin= pin1;
         this->cancelPin = pin2;
         this->upPin = pin3;
@@ -259,7 +259,7 @@ class Menu{
       return;
     }
 
-    void kalibrasiYL69(const int pin, float* bawah, float* atas){
+    void kalibrasiYL69(const int pin, int* bawah, int* atas){
       char buff[16];
       char* text = "bawah:%d atas:%d";
       int b = *bawah;
@@ -466,7 +466,7 @@ class Menu{
     }
     float ukurYL69(){
       int sensorValue = analogRead(this->yl69);
-      float percentValue = map(sensorValue, *atas, *bawah , 0, 100);
+      float percentValue = map(sensorValue, *bawah, *atas  , 0, 100);
       if(percentValue < 14){ 
         ringAlarm(false);
       }else{ 
@@ -476,10 +476,10 @@ class Menu{
     }
     void ringAlarm(bool alarm){
       if(alarm){
-        digitalWrite(alarm, HIGH);
+        digitalWrite(this->alarm, HIGH);
         digitalWrite(led, HIGH);
       }else{
-        digitalWrite(alarm, LOW);
+        digitalWrite(this->alarm, LOW);
         digitalWrite(led, LOW);
       }
       return;
