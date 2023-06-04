@@ -21,7 +21,17 @@ const int tombol_bawah = 4;
 const int tombol_ok = 2;
 const float berat = 700;
 
-long skl=0;
+struct Dat{
+  long skl;
+  int saved;
+}skl;
+
+struct Dat_yl69{
+  int atas=1025;
+  int bawah=0;
+  int saved = 0;
+}yl69Data;
+
 float percentValue = 0.0;
 int bawah=0;
 int atas=1025;
@@ -35,7 +45,7 @@ class Menu{
     LiquidCrystal_I2C* lcd;
     int w;
     int r;
-    long* skl;
+    Dat* skl;
     int menuIndex = 0;
     int okPin;
     int cancelPin;
@@ -45,15 +55,13 @@ class Menu{
     int yl69;
     int alarm;
     bool kalibrasi = false;
-    int* bawah;
-    int* atas;
+    Dat_yl69* yl69_data;
     int ada = 0;
-    long addr;
+    int addr=0;
     
-    String menu[5] = {
+    String menu[4] = {
       "kalibrasi ukuran",
       "pengukuran",
-      "kalibrasi YL69",
       "lainya",
       "ya         tidak"
     };
@@ -61,14 +69,13 @@ class Menu{
   public:
     Menu(const int pin1, const int pin2, 
       const int pin3, const int pin4, const int yl69, const int alarm, 
-      long* skl, LiquidCrystal_I2C* lcd, int* bawah, int* atas, long addr){
+      Dat* skl, LiquidCrystal_I2C* lcd, Dat_yl69* dataYl69, int addr){
         this->okPin= pin1;
         this->cancelPin = pin2;
         this->upPin = pin3;
         this->downPin = pin4;
         this->lcd = lcd;
-        this->bawah = bawah;
-        this->atas = atas;
+        this->yl69_data = dataYl69;
         this->yl69 = yl69;
         this->alarm = alarm;
         this->addr = addr;
@@ -90,11 +97,12 @@ class Menu{
       return ;
     }
     
-    int kalibrate(int w, int rep, long* skl){
+    int kalibrate(int w, int rep, Dat* skl){
       int kode = 0;
       char buff[16];
       int lanjut = 1;
       long hasil = 0;
+      Dat temp;
       
       delay(1000);
       Ukur.set_scale();
@@ -102,7 +110,7 @@ class Menu{
       lcd->clear();
       lcd->print("masukan beban!");
       lcd->setCursor(0,1);
-      lcd->print(menu[4]);
+      lcd->print(menu[3]);
       while(lanjut){
         int ans = getCommandStroke(1);
         if(ans == 2){
@@ -125,11 +133,24 @@ class Menu{
         lcd->clear();
         sprintf(buff, "skala:%d", hasil);
         lcd->print(buff);
-        lcd->setCursor(0, 1);
+        lcd->setCursor(0,1);
         sprintf(buff, "tare:%d", Ukur.get_tare());
         lcd->print(buff);
         delay(3000);
-        EEPROM.put(addr, hasil);
+        skl->skl = hasil;
+        skl->saved = 7070;
+        temp.skl = hasil;
+        temp.saved = 7070;
+        EEPROM.put(addr, temp);
+        EEPROM.get(addr, temp);
+        lcd->clear();
+        lcd->print("tersimpan");
+        delay(2000);
+        lcd->clear();
+        lcd->print("memory:");
+        lcd->setCursor(0,1);
+        lcd->print(temp.skl);
+        delay(2000);
       }
       return kode;
     }
@@ -138,7 +159,7 @@ class Menu{
       lcd->setCursor(0,0);
       lcd->print(menu[menuIndex]);
       lcd->setCursor(0,1);
-      lcd->print(menu[4]); 
+      lcd->print(menu[3]); 
       return;
     }
     void initCommand(){
@@ -153,11 +174,11 @@ class Menu{
       if(!mode){
         if(arah == ARROW_UP){
           menuIndex++;
-          menuIndex = menuIndex > 3 ? 0 : menuIndex;
+          menuIndex = menuIndex > 2 ? 0 : menuIndex;
           lcd->clear();
         }else if(arah == ARROW_DOWN){
           menuIndex--;
-          menuIndex = menuIndex < 0 ? 3 : menuIndex;
+          menuIndex = menuIndex < 0 ? 2 : menuIndex;
           lcd->clear();
         }
         if(com == COM_YES){
@@ -179,9 +200,9 @@ class Menu{
           case 1:
             pengukuranDisplay(ukurYL69(),Ukur.get_units(10));
             break;
-          case 2:
-            kalibrasiYL69(YL69, bawah, atas);
-            break;
+//        case 2:
+//          kalibrasiYL69(YL69, yl69_data);
+//          break;
           default:
             break;
         }
@@ -259,62 +280,145 @@ class Menu{
       return;
     }
 
-    void kalibrasiYL69(const int pin, int* bawah, int* atas){
+    void kalibrasiYL69(const int pin, Dat_yl69* yl69){
       char buff[16];
-      char* text = "bawah:%d atas:%d";
-      int b = *bawah;
-      int a = *atas;
+      char* text = "b:%d a:%d";
+      char* text2 ="edit:%s";
+      char ans[][10] = {"atas","bawah"};
+      Dat_yl69 temp;
+
+      int b = yl69->saved? yl69->bawah : 0;
+      int a = yl69->saved? yl69->atas : 1025;
       bool edit = false;
       int editIndex = 0;
-
-      
+      int arrow;
+      int com;
+    
+      //noInterrupts();
+      //check dari eeprom
+      lcd->clear();
+      lcd->print("ambil dari EEPROM");
+      EEPROM.get(addr+sizeof(Dat) + 1, temp);
+      delay(2000);
+      if(temp.saved != 707092){
+        lcd->clear();
+        lcd->print("belum ada data");
+        delay(2000);
+        lcd->clear();
+        lcd->print("kalibrasi?");
+        lcd->setCursor(0,1);
+        lcd->print(menu[3]);
+        while(true){
+          int command = getCommandStroke(1);
+          if(command == COM_NO){
+            edit = 0;
+            break;
+          }
+          if(command == COM_YES){
+            edit = 1;
+            break;
+          }
+        }
+      }else{
+        lcd->clear();
+        lcd->print("ambil data");
+        delay(2000);
+        lcd->clear();
+        yl69_data->atas = temp.atas;
+        yl69_data->bawah = temp.bawah;
+        lcd->print("data terambil");
+        delay(2000);
+        lcd->clear();
+        sprintf(buff, text, temp.atas, temp.bawah);
+        lcd->setCursor(1,0);
+        lcd->print(buff);
+        delay(2000);
+      }
+      if(!edit){
+        mode=0;
+        return;
+      }
+       
       lcd->clear();
       lcd->print("masukan batas:");
       lcd->setCursor(0,1);
-      sprintf(buff, text, *bawah, *atas);
+      sprintf(buff, text, b, a);
       lcd->print(buff);
-      while(true){
-        int arrow = getArrowStroke(1);
-        int command = getCommandStroke(1);
-//        Serial.print(sprintf(buff, "arrow: %i", arrow));
-//        Serial.println(sprintf(buff,",command: %i", command));
-        if(!edit){
+      
+      while(edit){
+        lcd->clear();
+        sprintf(buff, text2, ans);
+        lcd->print(buff);
+        while(true){
+          arrow = getArrowStroke(1);
+          com = getCommandStroke(1);
           if(arrow == ARROW_UP){
+            lcd->clear();
             editIndex++;
             editIndex = editIndex > 1? 0: editIndex;
+            sprintf(buff, text2, ans[editIndex]);
           }
           else if(arrow == ARROW_DOWN){
+            lcd->clear();
             editIndex--;
             editIndex = editIndex < 0? 1: editIndex;
+            sprintf(buff, text2, ans[editIndex]);
           }
-          if(command == COM_YES) edit = true;
-          else if(command == COM_NO) edit = false;
-        }else{
-           if(arrow == ARROW_UP){
+          if(com == COM_YES){
+            break;
+          }
+          else if(com == COM_NO){
+            break;
+          }
+        }
+        lcd->clear();
+        sprintf(buff, text2, editIndex);
+        lcd->print(buff);
+        while(true){
+          if(arrow == ARROW_UP){
+            lcd->clear();
             if(editIndex) b++;
             else a++;
           }
           else if(arrow == ARROW_DOWN){
+            lcd->clear();
             if(editIndex) b--;
             else a--;
           }
-          if(command == COM_YES){
-            *bawah = b;
-            *atas = a;
+          if(com == COM_YES && editIndex){
+            edit=false;
+            yl69_data->bawah = b;
+            yl69_data->atas = a;
             break;
           }
-          else if(command == COM_NO){
-            edit = false;
-            b = *bawah;
-            a = *atas;
+          else if(com == COM_NO){
+            edit = true;
+            b = yl69_data->bawah;
+            a = yl69_data->atas;
           }
-          lcd->print("masukan batas:");
-          lcd->setCursor(1,0);
-          sprintf(buff,text,b,a);
-          lcd->print(buff);
+          lcd->print(ans[editIndex]);
+          sprintf(buff, "%s:%d", ans[editIndex], editIndex ? a : b);
+          lcd->setCursor(0,1);
+          lcd->print(buff); 
         }
       }
-      interrupts();
+      if(edit)
+        while(true){
+        //setelah edit
+        char* text = "simpan data?";
+        int command = getCommandStroke(1);
+        if(command == COM_YES){
+         EEPROM.put((addr + sizeof(Dat) + 1), *yl69);
+         lcd->print("telah disimpan");
+         break;
+        }
+        else{
+          lcd->print("tidak disimpan");
+          delay(2000);
+          break;
+        }
+      }
+      mode=0;
       return;
     }
 
@@ -335,9 +439,9 @@ class Menu{
       int lanjut = 1;
 
       lcd->clear();
-      lcd->print("ambil dari ROM?");
+      lcd->print("check ROM?");
       lcd->setCursor(0,1);
-      lcd->print(menu[4]);
+      lcd->print(menu[3]);
       while(lanjut){
         ans = getCommandStroke(1);
         if(ans == COM_NO) lanjut=0;
@@ -354,7 +458,7 @@ class Menu{
         lcd->clear();
         lcd->print(txt4);
         lcd->setCursor(0,1);
-        lcd->print(menu[4]);
+        lcd->print(menu[3]);
         while(lanjut){
           ans = getCommandStroke(1);
           if(ans == COM_NO){
@@ -367,17 +471,22 @@ class Menu{
         }
       }
       if(mod == 1){
-        long temp;
+        Dat temp;
         
         lcd->clear();
         lcd->print("ambil dari ROM");
-        EEPROM.get(addr, temp);
         delay(2000);
         lcd->clear();
-        lcd->print("terbaca:");
-        lcd->print(temp);
+        lcd->print("addres:");
+        lcd->print(addr);
         delay(2000);
-        if (temp == 0){
+        EEPROM.get(addr, temp);
+        lcd->clear();
+        lcd->print("terbaca!");
+        lcd->setCursor(0,1);
+        lcd->print((int)temp.saved);
+        delay(2000);
+        if((int)temp.saved != 7070){
           // kalau gak ada suruh kalibrasi
           lcd->clear();
           lcd->print("belum dikalibrasi");
@@ -385,19 +494,26 @@ class Menu{
           lcd->clear();
           lcd->print("silahkan kalibrasi");
           lcd->setCursor(0, 1);
-          lcd->print(menu[4]);
+          lcd->print(menu[3]);
         }else{
           // kalau ada langsung pakai untuk kalibrasi
           lcd->clear();
           lcd->print("ambil data");
-          Ukur.set_scale(*skl);
+          Ukur.set_scale(temp.skl);
+          Ukur.tare();
           delay(2000);
           lcd->clear();
           lcd->print("terkalibrasi");
           delay(2000);
+          lcd->setCursor(0,1);
+          lcd->print("skala:");
+          lcd->print(temp.skl);
+          delay(2000);
+          kalibrasi=false;
         }
       }else if(mod == 2){
         lanjut=1;
+        kalibrasi=true;
         lcd->clear();
         lcd->print("masukan berat");
         lcd->setCursor(0,1);
@@ -454,8 +570,7 @@ class Menu{
           }
         }
       }
-      if(w && rep){
-        kalibrasi = true;
+      if(w && rep && kalibrasi){
         this->w = w;
         this->r = r;
         kalibrate(this->w, this->r, this->skl);
@@ -466,7 +581,7 @@ class Menu{
     }
     float ukurYL69(){
       int sensorValue = analogRead(this->yl69);
-      float percentValue = map(sensorValue, *bawah, *atas  , 0, 100);
+      float percentValue = map(sensorValue, yl69_data->atas, (*yl69_data).bawah  , 0, 100);
       if(percentValue < 14){ 
         ringAlarm(false);
       }else{ 
@@ -488,7 +603,7 @@ class Menu{
       mode = value;
       return;
     }
-}utama(tombol_ok, tombol_cancel, tombol_atas, tombol_bawah, YL69, alarm, &skl, &lcd, &atas, &bawah, 0);
+}utama(tombol_ok, tombol_cancel, tombol_atas, tombol_bawah, YL69, alarm, &skl, &lcd, &yl69Data, 0);
 void setup() {
   Serial.begin(9600);
   pinMode(alarm, OUTPUT);
@@ -499,7 +614,9 @@ void setup() {
   pinMode(tombol_bawah, INPUT_PULLUP);
   pinMode(tombol_ok, INPUT_PULLUP);
   Ukur.begin(Dout, sck);
-  Ukur.set_scale(skl);
+  EEPROM.get(0, skl);
+  Ukur.set_scale(skl.skl);
+  Ukur.tare();
   utama.selamatFunc();
 }
 void loop() {
